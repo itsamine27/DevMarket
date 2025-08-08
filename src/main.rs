@@ -1,0 +1,45 @@
+use std::net::SocketAddr;
+
+use axum::{
+    Router,
+    extract::Path,
+    response::{Html, IntoResponse},
+    routing::get,
+    serve,
+};
+use dotenvy::dotenv;
+use sqlx::{PgPool, postgres::PgPoolOptions};
+use tokio::net::TcpListener;
+use tracing::info;
+#[cfg(test)]
+mod test;
+use crate::products::product_route;
+mod products;
+#[derive(Clone)]
+struct State {
+    pg: PgPool,
+}
+#[tokio::main]
+async fn main() {
+    dotenv().ok();
+    let url = std::env::var("DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&url)
+        .await
+        .unwrap();
+    let state = State { pg: pool };
+    tracing_subscriber::fmt::init();
+    let router = Router::new()
+        .route("/:name", get(hello))
+        .nest("/products", product_route())
+        .with_state(state);
+
+    let sock = SocketAddr::from(([127, 0, 0, 1], 8080));
+    info!("lisening on port {sock}");
+    let app = TcpListener::bind(sock).await.unwrap();
+    serve(app, router).await.unwrap();
+}
+async fn hello(Path(name): Path<String>) -> impl IntoResponse {
+    Html(format!("hello {name}"))
+}
