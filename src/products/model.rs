@@ -21,8 +21,8 @@ pub struct Product {
     pub owner_id: i32,
 }
 #[derive(Deserialize)]
-pub struct UpdateProduct{
-    pub name:String,
+pub struct UpdateProduct {
+    pub name: String,
     pub description: String,
     pub price: i32,
 }
@@ -46,8 +46,10 @@ impl State {
 
         store
     }
-    pub async fn all_product(&self) -> Vec<Product> {
-        let store = query_as!(Product, "SELECT * FROM Product")
+    pub async fn all_product(&self, max:i32) -> Vec<Product> {
+        let store = query_as::<_,Product>("SELECT * FROM Product OFFSET $1 LIMIT $2")
+            .bind(max)
+            .bind(max)
             .fetch_all(&self.pg)
             .await
             .expect("failed to get data");
@@ -67,7 +69,7 @@ impl State {
         .expect("a problem has occured in the delete");
         store
     }
-    pub async fn update_product(&self, id:i64, data: Json<UpdateProduct>)-> Product{
+    pub async fn update_product(&self, id: i64, data: Json<UpdateProduct>) -> Product {
         let store = query_as!(
             Product,
             "UPDATE Product
@@ -95,7 +97,7 @@ async fn tt_all() {
         .await
         .unwrap();
     let state = State { pg: pool };
-    println!("{:?}", state.all_product().await);
+    println!("{:?}", state.all_product(2).await);
     let data: Json<NewProduct> = Json(NewProduct {
         name: "work space".to_string(),
         description: "it is a works space app".to_string(),
@@ -104,15 +106,14 @@ async fn tt_all() {
     });
     let new = state.new_product(data).await;
     println!("{new:?}");
-    println!("{:?}", state.all_product().await);
-    let up = Json(UpdateProduct{
+    println!("{:?}", state.all_product(2).await);
+    let up = Json(UpdateProduct {
         name: "amine".to_string(),
         description: "test description".to_string(),
         price: 77,
     });
     println!("{:?}", state.update_product(new.id, up).await);
-    println!("{:?}", state.all_product().await);
+    println!("{:?}", state.all_product(2).await);
     println!("{:?}", state.delete_product(new.id).await);
-    println!("{:?}", state.all_product().await);
-    
+    println!("{:?}", state.all_product(2).await);
 }

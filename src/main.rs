@@ -13,8 +13,9 @@ use tokio::net::TcpListener;
 use tracing::info;
 #[cfg(test)]
 mod test;
-use crate::products::product_route;
+use crate::{products::product_route, user::user_router};
 mod products;
+mod user;
 #[derive(Clone)]
 struct State {
     pg: PgPool,
@@ -33,6 +34,7 @@ async fn main() {
     let router = Router::new()
         .route("/:name", get(hello))
         .nest("/products", product_route())
+        .nest("/auth", user_router())
         .with_state(state);
 
     let sock = SocketAddr::from(([127, 0, 0, 1], 8080));
