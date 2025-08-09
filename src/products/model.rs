@@ -1,8 +1,8 @@
 use crate::State;
+use crate::error::Result;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, query_as};
-
 #[derive(Debug, Deserialize)]
 pub struct NewProduct {
     pub name: String,
@@ -27,7 +27,7 @@ pub struct UpdateProduct {
     pub price: i32,
 }
 impl State {
-    pub async fn new_product(&self, data: Json<NewProduct>) -> Product {
+    pub async fn new_product(&self, data: Json<NewProduct>) -> Result<Product> {
         let store = query_as!(
             Product,
             r#"
@@ -41,21 +41,19 @@ impl State {
             data.owner_id
         )
         .fetch_one(&self.pg)
-        .await
-        .expect("Failed to insert product");
+        .await?;
 
-        store
+        Ok(store)
     }
-    pub async fn all_product(&self, max:i32) -> Vec<Product> {
-        let store = query_as::<_,Product>("SELECT * FROM Product OFFSET $1 LIMIT $2")
+    pub async fn all_product(&self, max: i32) -> Result<Vec<Product>> {
+        let store = query_as::<_, Product>("SELECT * FROM Product OFFSET $1 LIMIT $2")
             .bind(max)
             .bind(max)
             .fetch_all(&self.pg)
-            .await
-            .expect("failed to get data");
-        store
+            .await?;
+        Ok(store)
     }
-    pub async fn delete_product(&self, id: i64) -> Product {
+    pub async fn delete_product(&self, id: i64) -> Result<Product> {
         let store = query_as!(
             Product,
             "DELETE FROM Product 
@@ -65,11 +63,10 @@ impl State {
             id
         )
         .fetch_one(&self.pg)
-        .await
-        .expect("a problem has occured in the delete");
-        store
+        .await?;
+        Ok(store)
     }
-    pub async fn update_product(&self, id: i64, data: Json<UpdateProduct>) -> Product {
+    pub async fn update_product(&self, id: i64, data: Json<UpdateProduct>) -> Result<Product> {
         let store = query_as!(
             Product,
             "UPDATE Product
@@ -82,15 +79,14 @@ impl State {
             id,
         )
         .fetch_one(&self.pg)
-        .await
-        .expect("a problem has occured when updating data");
-        store
+        .await?;
+        Ok(store)
     }
 }
 #[tokio::test]
 async fn tt_all() {
     dotenvy::dotenv().ok();
-    let url = std::env::var("DATABASE_URL").expect("invalid url path");
+    let url = std::env::var("DATABASE_URL").unwrap();
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)
         .connect(&url)
@@ -104,7 +100,7 @@ async fn tt_all() {
         price: 70,
         owner_id: 2,
     });
-    let new = state.new_product(data).await;
+    let new = state.new_product(data).await.unwrap();
     println!("{new:?}");
     println!("{:?}", state.all_product(2).await);
     let up = Json(UpdateProduct {

@@ -14,6 +14,8 @@ use tracing::info;
 #[cfg(test)]
 mod test;
 use crate::{products::product_route, user::user_router};
+use crate::error::Result;
+mod error;
 mod products;
 mod user;
 #[derive(Clone)]
@@ -21,14 +23,13 @@ struct State {
     pg: PgPool,
 }
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()>{
     dotenv().ok();
-    let url = std::env::var("DATABASE_URL").unwrap();
+    let url = std::env::var("DATABASE_URL")?;
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&url)
-        .await
-        .unwrap();
+        .await?;
     let state = State { pg: pool };
     tracing_subscriber::fmt::init();
     let router = Router::new()
@@ -39,8 +40,9 @@ async fn main() {
 
     let sock = SocketAddr::from(([127, 0, 0, 1], 8080));
     info!("lisening on port {sock}");
-    let app = TcpListener::bind(sock).await.unwrap();
-    serve(app, router).await.unwrap();
+    let app = TcpListener::bind(sock).await?;
+    serve(app, router).await?;
+    Ok(())
 }
 async fn hello(Path(name): Path<String>) -> impl IntoResponse {
     Html(format!("hello {name}"))
