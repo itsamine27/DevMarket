@@ -17,7 +17,7 @@ pub struct User {
     id: i32,
     email: String,
     username: String,
-    password: String,
+    pub password: String,
     role: Role,
 }
 #[derive(Deserialize, Serialize, Clone)]
@@ -84,6 +84,16 @@ impl State {
         .fetch_all(&self.pg)
         .await?)
     }
+    pub async fn get_user(&self, username:String) -> Result<User>{
+        let quer = query_as::<_,User>(
+            r#"
+            SELECT * FROM "User"
+            WHERE username=$1
+            "#
+        ).bind(username).fetch_one(&self.pg)
+        .await?;
+        Ok(quer)
+    }
 }
 
 #[tokio::test]
@@ -95,7 +105,8 @@ async fn user_t() {
         .connect(&url)
         .await
         .unwrap();
-    let state = State { pg: pool };
+    let sec = std::env::var("JWT_TOKEN").unwrap();
+    let state = State { pg: pool, JWT_SECRET:sec };
     println!("{:?}", state.all_user().await);
     let data = Json(NewUser {
         email: "amine@gmail.com".to_string(),

@@ -21,6 +21,7 @@ mod user;
 #[derive(Clone)]
 struct State {
     pg: PgPool,
+    JWT_SECRET: String,
 }
 #[tokio::main]
 async fn main() -> Result<()>{
@@ -30,7 +31,8 @@ async fn main() -> Result<()>{
         .max_connections(5)
         .connect(&url)
         .await?;
-    let state = State { pg: pool };
+    let secret = std::env::var("JWT_SECRET")?;
+    let state = State { pg: pool, JWT_SECRET: secret};
     tracing_subscriber::fmt::init();
     let router = Router::new()
         .route("/:name", get(hello))

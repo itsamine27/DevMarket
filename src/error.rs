@@ -1,7 +1,9 @@
 use std::{env::VarError, io::Error as StdError};
 
 use axum::{http::StatusCode, response::IntoResponse};
+use bcrypt::BcryptError;
 use thiserror::Error;
+use jsonwebtoken::errors::Error as jwtErr;
 pub type Result<S> = std::result::Result<S, Error>;
 #[derive(Debug, Error)]
 pub enum Error {
@@ -10,7 +12,14 @@ pub enum Error {
     #[error("DB connection error: ")]
     CnError(#[from] VarError),
     #[error("io error")]
-    IoError(#[from] StdError)
+    IoError(#[from] StdError),
+    #[error("bcrypt error")]
+    ByptError(#[from] BcryptError),
+    #[error("auth error")]
+    JWTError(#[from] jwtErr),
+    #[error("auth error")]
+    InvalidUser,
+    
 }
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
@@ -22,7 +31,12 @@ impl IntoResponse for Error {
             Self::IoError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "sthg when wrong when trying to connect to the server"
-            )
+            ),
+            Self::ByptError(_)|Self::JWTError(_)|Self::InvalidUser =>(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "sthg went wrong when trying to getting the user"
+            ),
+             
             
         }.into_response()
     }
