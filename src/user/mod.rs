@@ -1,4 +1,3 @@
-
 use crate::error::{Error, Result};
 use crate::{
     State as Mc,
@@ -12,12 +11,12 @@ use axum::{
 };
 use bcrypt::verify;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 mod model;
 #[derive(Deserialize)]
-struct LgForm{
+struct LgForm {
     username: String,
     password: String,
 }
@@ -69,20 +68,17 @@ impl Clains {
     }
 }
 #[axum::debug_handler]
-async fn login(State(mc): State<Mc>,Json(form): Json<LgForm>) -> Result<impl IntoResponse> {
+async fn login(State(mc): State<Mc>, Json(form): Json<LgForm>) -> Result<impl IntoResponse> {
     let user: User = mc.get_user(form.username.clone()).await?;
-    if verify(form.password, &user.password)?{
+    if verify(form.password, &user.password)? {
         let newt = Clains::new(form.username.clone());
         let jwt = encode(
             &Header::default(),
             &newt,
             &EncodingKey::from_secret(mc.JWT_SECRET.as_bytes()),
         )?;
-        return  Ok(Json(serde_json::json!({ "access_token": jwt })));
+        return Ok(Json(serde_json::json!({ "access_token": jwt })));
     }
-    
-    
-    Err(Error::InvalidUser)
-    
-}
 
+    Err(Error::InvalidUser)
+}

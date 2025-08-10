@@ -13,8 +13,8 @@ use tokio::net::TcpListener;
 use tracing::info;
 #[cfg(test)]
 mod test;
-use crate::{products::product_route, user::user_router};
 use crate::error::Result;
+use crate::{products::product_route, user::user_router};
 mod error;
 mod products;
 mod user;
@@ -24,7 +24,7 @@ struct State {
     JWT_SECRET: String,
 }
 #[tokio::main]
-async fn main() -> Result<()>{
+async fn main() -> Result<()> {
     dotenv().ok();
     let url = std::env::var("DATABASE_URL")?;
     let pool = PgPoolOptions::new()
@@ -32,7 +32,10 @@ async fn main() -> Result<()>{
         .connect(&url)
         .await?;
     let secret = std::env::var("JWT_SECRET")?;
-    let state = State { pg: pool, JWT_SECRET: secret};
+    let state = State {
+        pg: pool,
+        JWT_SECRET: secret,
+    };
     tracing_subscriber::fmt::init();
     let router = Router::new()
         .route("/:name", get(hello))
