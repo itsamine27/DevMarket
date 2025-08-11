@@ -16,9 +16,9 @@ mod test;
 use crate::error::Result;
 use crate::{products::product_route, user::user_router};
 mod error;
+mod ext;
 mod products;
 mod user;
-mod Extractor;
 #[derive(Clone)]
 struct State {
     pg: PgPool,

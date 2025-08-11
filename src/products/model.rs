@@ -2,6 +2,7 @@ use crate::State;
 use crate::error::Result;
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::{FromRow, query_as};
 #[derive(Debug, Deserialize)]
 pub struct NewProduct {
@@ -82,6 +83,39 @@ impl State {
         .await?;
         Ok(store)
     }
+    pub async fn get_product(&self, id: i64) -> Result<Product> {
+        let store = query_as!(
+            Product,
+            "SELECT id, name, description, price, rating, owner_id FROM Product
+            WHERE id = $1",
+            id
+        )
+        .fetch_one(&self.pg)
+        .await?;
+        Ok(store)
+    }
+    pub async fn get_full_product(&self, id: i64) -> Result<Json<Value>> {
+        let row: (Value,) = sqlx::query_as(
+            r#"
+            SELECT to_jsonb(result) FROM (
+                SELECT 
+                    Product.id, 
+                    Product.name, 
+                    Product.price, 
+                    Product.rating, 
+                    "User".username 
+                FROM Product
+                LEFT JOIN "User" ON Product.owner_id = "User".id
+                WHERE Product.id = $1
+            ) AS result;
+            "#,
+        )
+        .bind(id)
+        .fetch_one(&self.pg)
+        .await?;
+
+        Ok(Json(row.0))
+    }
 }
 #[tokio::test]
 async fn tt_all() {
@@ -92,7 +126,7 @@ async fn tt_all() {
         .connect(&url)
         .await
         .unwrap();
-    let sec = std::env::var("JWT_TOKEN").unwrap();
+    let sec = std::env::var("jwt_secret").unwrap();
     let state = State {
         pg: pool,
         jwt_secret: sec,

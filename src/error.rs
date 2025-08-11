@@ -33,14 +33,12 @@ impl IntoResponse for Error {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "sthg when wrong when trying to connect to the server",
             ),
-            Self::ByptError(_) | Self::JWTError(_) | Self::InvalidUser => (
+            Self::ByptError(_) | Self::JWTError(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "sthg went wrong when trying to getting the user",
             ),
-            Self::JsonError(_) =>(
-                StatusCode::BAD_REQUEST,
-                "invalid data format in request"
-            )
+            Self::InvalidUser => (StatusCode::FORBIDDEN, "ur not allowed to be in here"),
+            Self::JsonError(_) => (StatusCode::BAD_REQUEST, "invalid data format in request"),
         }
         .into_response()
     }

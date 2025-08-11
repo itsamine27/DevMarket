@@ -1,10 +1,12 @@
 use crate::error::{Error, Result};
+use crate::ext::IsAuth;
 use crate::user::model::Role;
 use crate::{
     State as Mc,
     user::model::{NewUser, User},
 };
 use axum::response::IntoResponse;
+use axum::routing::get;
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -12,18 +14,20 @@ use axum::{
 };
 use bcrypt::verify;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{EncodingKey, Header, encode};
+use jsonwebtoken::{
+    Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::{debug, info};
-mod model;
+pub mod model;
 #[derive(Deserialize, Serialize)]
 struct LgForm {
     username: String,
     password: String,
 }
 #[derive(Deserialize, Serialize)]
-struct NewUserResp{
+struct NewUserResp {
     user: User,
     message: Value,
 }
@@ -34,6 +38,7 @@ pub fn user_router() -> Router<Mc> {
         .route("/update/:username", put(update_user))
         .route("/delete", delete(delete_user))
         .route("/login", post(login))
+        .route("/:username", get(get_user))
 }
 
 async fn create_user(State(mc): State<Mc>, data: Json<NewUser>) -> Result<impl IntoResponse> {
@@ -41,7 +46,7 @@ async fn create_user(State(mc): State<Mc>, data: Json<NewUser>) -> Result<impl I
     let data = mc.create_user(data).await?;
     info!("creating user has been finished");
     info!("login started");
-    let login_data =Json(LgForm{
+    let login_data = Json(LgForm {
         username: data.username.clone(),
         password: data.password.clone(),
     });
@@ -56,26 +61,43 @@ async fn create_user(State(mc): State<Mc>, data: Json<NewUser>) -> Result<impl I
     Ok(Json(response))
 }
 async fn update_user(
+    IsAuth(ext): IsAuth,
     State(mc): State<Mc>,
     Path(username): Path<String>,
     data: Json<NewUser>,
 ) -> Result<Json<User>> {
-    info!("updating user started");
-    let data = mc.update_user(data, username).await?;
-    info!("updating user has been finished");
-    Ok(Json(data))
+    if ext.username == username || ext.role == Role::Admin {
+        info!("updating user started");
+        let data = mc.update_user(data, username).await?;
+        info!("updating user has been finished");
+        return Ok(Json(data));
+    }
+    return Err(Error::InvalidUser);
 }
-async fn delete_user(State(mc): State<Mc>, Path(username): Path<String>) -> Result<Json<User>> {
-    info!("deleting user started");
-    let data = mc.delete_user(username).await?;
-    info!("deleting user finished");
+async fn delete_user(
+    IsAuth(ext): IsAuth,
+    State(mc): State<Mc>,
+    Path(username): Path<String>,
+) -> Result<Json<User>> {
+    if username == ext.username || ext.role == Role::Admin {
+        info!("deleting user started");
+        let data = mc.delete_user(username).await?;
+        info!("deleting user finished");
+        return Ok(Json(data));
+    }
+    Err(Error::InvalidUser)
+}
+async fn get_user(State(mc): State<Mc>, Path(username): Path<String>) -> Result<Json<User>> {
+    info!("fetching user started");
+    let data = mc.get_user(username).await?;
+    info!("fetching user finished");
     Ok(Json(data))
 }
 #[derive(Serialize, Deserialize)]
 pub struct Clains {
-    username: String,
-    role: Role,
-    exp: usize,
+    pub username: String,
+    pub role: Role,
+    pub exp: usize,
 }
 impl Clains {
     fn new(username: String, role: Role) -> Self {
@@ -88,6 +110,20 @@ impl Clains {
             role,
             exp: now_t,
         }
+    }
+    pub fn from_token(token: &str) -> Result<Self> {
+        let secret = std::env::var("JWT_SECRET")?;
+
+        let validation = Validation::new(Algorithm::HS256);
+
+        let token_data: TokenData<Clains> = decode::<Clains>(
+            token,
+            &DecodingKey::from_secret(secret.as_bytes()),
+            &validation,
+        )?;
+
+        // Return the claims
+        Ok(token_data.claims)
     }
 }
 #[axum::debug_handler]

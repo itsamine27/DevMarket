@@ -13,14 +13,14 @@ pub enum Role {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "Roles", rename_all = "lowercase")]
-enum UserRole{
+enum UserRole {
     Buyer,
-    Seller
+    Seller,
 }
 #[derive(Deserialize, Serialize, FromRow, Clone, Debug)]
 pub struct User {
-    id: i32,
-    email: String,
+    pub id: i32,
+    pub email: String,
     pub username: String,
     pub password: String,
     pub role: Role,
@@ -112,7 +112,7 @@ async fn user_t() {
         .connect(&url)
         .await
         .unwrap();
-    let sec = std::env::var("JWT_TOKEN").unwrap();
+    let sec = std::env::var("jwt_secret").unwrap();
     let state = State {
         pg: pool,
         jwt_secret: sec,
