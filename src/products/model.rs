@@ -95,7 +95,7 @@ async fn tt_all() {
     let sec = std::env::var("JWT_TOKEN").unwrap();
     let state = State {
         pg: pool,
-        JWT_SECRET: sec,
+        jwt_secret: sec,
     };
     println!("{:?}", state.all_product(2).await);
     let data: Json<NewProduct> = Json(NewProduct {

@@ -11,21 +11,26 @@ pub enum Role {
     Seller,
     Buyer,
 }
-
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "Roles", rename_all = "lowercase")]
+enum UserRole{
+    Buyer,
+    Seller
+}
 #[derive(Deserialize, Serialize, FromRow, Clone, Debug)]
 pub struct User {
     id: i32,
     email: String,
-    username: String,
+    pub username: String,
     pub password: String,
-    role: Role,
+    pub role: Role,
 }
 #[derive(Deserialize, Serialize, Clone)]
 pub struct NewUser {
     email: String,
     username: String,
     password: String,
-    role: Role,
+    role: UserRole,
 }
 impl State {
     pub async fn create_user(&self, data: Json<NewUser>) -> Result<User> {
@@ -110,14 +115,14 @@ async fn user_t() {
     let sec = std::env::var("JWT_TOKEN").unwrap();
     let state = State {
         pg: pool,
-        JWT_SECRET: sec,
+        jwt_secret: sec,
     };
     println!("{:?}", state.all_user().await);
     let data = Json(NewUser {
         email: "amine@gmail.com".to_string(),
         username: "aminou".to_string(),
-        password: "6;;356gd".to_string(),
-        role: Role::Seller,
+        password: "azerty".to_string(),
+        role: UserRole::Seller,
     });
     let new = state.create_user(data).await.unwrap();
     println!("{:?}", state.all_user().await);

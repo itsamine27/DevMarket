@@ -19,6 +19,8 @@ pub enum Error {
     JWTError(#[from] jwtErr),
     #[error("auth error")]
     InvalidUser,
+    #[error("Json error")]
+    JsonError(#[from] serde_json::Error),
 }
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
@@ -35,6 +37,10 @@ impl IntoResponse for Error {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "sthg went wrong when trying to getting the user",
             ),
+            Self::JsonError(_) =>(
+                StatusCode::BAD_REQUEST,
+                "invalid data format in request"
+            )
         }
         .into_response()
     }

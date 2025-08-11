@@ -18,10 +18,11 @@ use crate::{products::product_route, user::user_router};
 mod error;
 mod products;
 mod user;
+mod Extractor;
 #[derive(Clone)]
 struct State {
     pg: PgPool,
-    JWT_SECRET: String,
+    jwt_secret: String,
 }
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -31,10 +32,10 @@ async fn main() -> Result<()> {
         .max_connections(5)
         .connect(&url)
         .await?;
-    let secret = std::env::var("JWT_SECRET")?;
+    let secret = std::env::var("jwt_secret")?;
     let state = State {
         pg: pool,
-        JWT_SECRET: secret,
+        jwt_secret: secret,
     };
     tracing_subscriber::fmt::init();
     let router = Router::new()
