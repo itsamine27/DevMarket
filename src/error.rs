@@ -35,6 +35,9 @@ pub enum Error {
 
     #[error("Conversion error")]
     Conversion(#[from] TryFromIntError),
+
+    #[error("env error")]
+    Env(#[from] dotenvy::Error),
 }
 
 impl IntoResponse for Error {
@@ -65,6 +68,10 @@ impl IntoResponse for Error {
                 "Expected an executable (.exe) file",
             ),
             Self::Conversion(_) => (StatusCode::BAD_REQUEST, "Failed to convert number type"),
+            Self::Env(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "A problem has occured when reading the env file",
+            ),
         };
 
         (status, message).into_response()

@@ -30,7 +30,7 @@ struct State {
 }
 #[tokio::main]
 async fn main() -> Result<()> {
-    dotenv().ok();
+    dotenv()?;
     let url = std::env::var("DATABASE_URL")?;
     let pool = PgPoolOptions::new()
         .max_connections(5)
