@@ -1,7 +1,7 @@
-#![warn(warnings)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
+#![deny(warnings)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::nursery)]
 
 use axum::{
     Router,
