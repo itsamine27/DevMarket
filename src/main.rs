@@ -1,4 +1,7 @@
-use std::net::SocketAddr;
+#![warn(warnings)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
 
 use axum::{
     Router,
@@ -9,6 +12,7 @@ use axum::{
 };
 use dotenvy::dotenv;
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tracing::info;
 #[cfg(test)]

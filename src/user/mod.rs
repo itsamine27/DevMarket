@@ -72,7 +72,7 @@ async fn update_user(
         info!("updating user has been finished");
         return Ok(Json(data));
     }
-    return Err(Error::InvalidUser);
+    Err(Error::InvalidUser)
 }
 async fn delete_user(
     IsAuth(ext): IsAuth,
@@ -100,23 +100,26 @@ pub struct Clains {
     pub exp: usize,
 }
 impl Clains {
-    fn new(username: String, role: Role) -> Self {
-        let now_t = Utc::now()
-            .checked_add_signed(Duration::minutes(60))
-            .expect("invalide time stamp")
-            .timestamp() as usize;
-        Self {
+    fn new(username: String, role: Role) -> Result<Self> {
+        let now_t = usize::try_from(
+            Utc::now()
+                .checked_add_signed(Duration::minutes(60))
+                .expect("invalide time stamp")
+                .timestamp(),
+        );
+        let data = Self {
             username,
             role,
-            exp: now_t,
-        }
+            exp: now_t?,
+        };
+        Ok(data)
     }
     pub fn from_token(token: &str) -> Result<Self> {
         let secret = std::env::var("JWT_SECRET")?;
 
         let validation = Validation::new(Algorithm::HS256);
 
-        let token_data: TokenData<Clains> = decode::<Clains>(
+        let token_data: TokenData<Self> = decode::<Self>(
             token,
             &DecodingKey::from_secret(secret.as_bytes()),
             &validation,
@@ -132,7 +135,7 @@ async fn login(State(mc): State<Mc>, Json(form): Json<LgForm>) -> Result<Json<Va
     let user: User = mc.get_user(form.username.clone()).await?;
     info!("username has been fetched");
     if verify(form.password, &user.password)? {
-        let newt = Clains::new(form.username.clone(), user.role);
+        let newt = Clains::new(form.username.clone(), user.role)?;
         let jwt = encode(
             &Header::default(),
             &newt,

@@ -80,6 +80,7 @@ impl State {
         .await?;
         Ok(quer)
     }
+    #[warn(dead_code)]
     pub async fn all_user(&self) -> Result<Vec<User>> {
         Ok(query_as::<_, User>(
             r#"

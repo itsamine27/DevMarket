@@ -60,7 +60,7 @@ async fn delete_product(
         info!("product has been deleted");
         return Ok(Json(data));
     }
-    return Err(Error::InvalidUser);
+    Err(Error::InvalidUser)
 }
 #[axum::debug_handler]
 async fn update_product(
@@ -77,7 +77,7 @@ async fn update_product(
         info!("finished updating product");
         return Ok(Json(pool));
     }
-    return Err(Error::InvalidUser);
+    Err(Error::InvalidUser)
 }
 async fn get_product(State(mc): State<Mc>, Path(id): Path<i64>) -> Result<Json<Value>> {
     info!("fetching product started");

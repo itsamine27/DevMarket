@@ -1,45 +1,72 @@
-use std::{env::VarError, io::Error as StdError};
+use std::{env::VarError, io::Error as StdError, num::TryFromIntError};
 
 use axum::{http::StatusCode, response::IntoResponse};
 use bcrypt::BcryptError;
-use jsonwebtoken::errors::Error as jwtErr;
+use jsonwebtoken::errors::Error as JwtError;
 use thiserror::Error;
-pub type Result<S> = std::result::Result<S, Error>;
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Database error: {0}")]
-    SqlxError(#[from] sqlx::Error),
-    #[error("DB connection error: ")]
-    CnError(#[from] VarError),
-    #[error("io error")]
-    IoError(#[from] StdError),
+    Sql(#[from] sqlx::Error),
+
+    #[error("DB connection error")]
+    Cn(#[from] VarError),
+
+    #[error("IO error")]
+    Io(#[from] StdError),
+
     #[error("bcrypt error")]
-    ByptError(#[from] BcryptError),
-    #[error("auth error")]
-    JWTError(#[from] jwtErr),
-    #[error("auth error")]
+    Bypt(#[from] BcryptError),
+
+    #[error("JWT error")]
+    JWT(#[from] JwtError),
+
+    #[error("Invalid user")]
     InvalidUser,
-    #[error("Json error")]
-    JsonError(#[from] serde_json::Error),
+
+    #[error("JSON error")]
+    Json(#[from] serde_json::Error),
+
+    #[error("Data type error")]
+    Datatype,
+
+    #[error("Conversion error")]
+    Conversion(#[from] TryFromIntError),
 }
+
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            Self::SqlxError(_) | Self::CnError(_) => (
+        let (status, message) = match self {
+            Self::Sql(_) | Self::Cn(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "sthg wrong in the data base or data base connection",
+                "Something went wrong with the database or its connection",
             ),
-            Self::IoError(_) => (
+            Self::Io(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "sthg when wrong when trying to connect to the server",
+                "I/O error occurred while connecting to the server",
             ),
-            Self::ByptError(_) | Self::JWTError(_) => (
+            Self::Bypt(_) | Self::JWT(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "sthg went wrong when trying to getting the user",
+                "Authentication failed while processing the user",
             ),
-            Self::InvalidUser => (StatusCode::FORBIDDEN, "ur not allowed to be in here"),
-            Self::JsonError(_) => (StatusCode::BAD_REQUEST, "invalid data format in request"),
-        }
-        .into_response()
+            Self::InvalidUser => (
+                StatusCode::FORBIDDEN,
+                "You are not authorized to access this resource",
+            ),
+            Self::Json(_) => (
+                StatusCode::BAD_REQUEST,
+                "Invalid JSON format in the request",
+            ),
+            Self::Datatype => (
+                StatusCode::BAD_REQUEST,
+                "Expected an executable (.exe) file",
+            ),
+            Self::Conversion(_) => (StatusCode::BAD_REQUEST, "Failed to convert number type"),
+        };
+
+        (status, message).into_response()
     }
 }
