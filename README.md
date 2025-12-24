@@ -14,7 +14,8 @@ Authorization: groundwork for request validation and access control.
 Main entry point: main.rs sets up the application and integrates modules.
 
 Project Structure:
-Code
+Code 
+```
 src/
  ├── products/        # Product-related logic
  ├── user/            # User management and authentication
@@ -22,13 +23,16 @@ src/
  ├── ext.rs           # Authorization and extensions
  ├── main.rs          # Application entry point
  └── test.rs          # Initial test setup
+ ```
 Getting Started: 
 Clone the repository
 
 bash
+```
 git clone https://github.com/itsamine27/DevMarket.git
 cd DevMarket
+ ```
 Run the project
-
+```
 bash
 cargo run
